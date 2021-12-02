@@ -4,6 +4,7 @@ import (
 	"crypto/tls"
 	"errors"
 	"net"
+	"time"
 
 	"github.com/emersion/go-sasl"
 	"github.com/emersion/go-smtp"
@@ -17,13 +18,18 @@ const (
 	SecurityNone
 )
 
+// 30 seconds was chosen as it's the
+// same duration as http.DefaultTransport's timeout.
+var defaultTimeout = 30 * time.Second
+
 type Backend struct {
-	Addr      string
-	Security  Security
-	TLSConfig *tls.Config
-	LMTP      bool
-	Host      string
-	LocalName string
+	Addr        string
+	Security    Security
+	TLSConfig   *tls.Config
+	LMTP        bool
+	Host        string
+	LocalName   string
+	DialTimeout time.Duration
 
 	unexported struct{}
 }
@@ -52,15 +58,27 @@ func NewLMTP(addr string, host string) *Backend {
 func (be *Backend) newConn() (*smtp.Client, error) {
 	var conn net.Conn
 	var err error
+
+	dialTimeout := be.DialTimeout
+	if dialTimeout == 0 {
+		dialTimeout = defaultTimeout
+	}
+
 	if be.LMTP {
 		if be.Security != SecurityNone {
 			return nil, errors.New("smtp-proxy: LMTP doesn't support TLS")
 		}
-		conn, err = net.Dial("unix", be.Addr)
+		conn, err = net.DialTimeout("tcp", be.Addr, dialTimeout)
 	} else if be.Security == SecurityTLS {
-		conn, err = tls.Dial("tcp", be.Addr, be.TLSConfig)
+		tlsDialer := tls.Dialer{
+			NetDialer: &net.Dialer{
+				Timeout: dialTimeout,
+			},
+			Config: be.TLSConfig,
+		}
+		conn, err = tlsDialer.Dial("tcp", be.Addr)
 	} else {
-		conn, err = net.Dial("tcp", be.Addr)
+		conn, err = net.DialTimeout("tcp", be.Addr, dialTimeout)
 	}
 	if err != nil {
 		return nil, err
