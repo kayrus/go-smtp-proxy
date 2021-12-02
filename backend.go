@@ -18,18 +18,29 @@ const (
 	SecurityNone
 )
 
-// 30 seconds was chosen as it's the
-// same duration as http.DefaultTransport's timeout.
-var defaultTimeout = 30 * time.Second
+var (
+	// 30 seconds was chosen as it's the
+	// same duration as http.DefaultTransport's timeout.
+	defaultTimeout = 30 * time.Second
+	// As recommended by RFC 5321. For DATA command reply (3xx one) RFC
+	// recommends a slightly shorter timeout but we do not bother
+	// differentiating these.
+	defaultCommandTimeout = 5 * time.Minute
+	// 10 minutes + 2 minute buffer in case the server is doing transparent
+	// forwarding and also follows recommended timeouts.
+	defaultSubmissionTimeout = 12 * time.Minute
+)
 
 type Backend struct {
-	Addr        string
-	Security    Security
-	TLSConfig   *tls.Config
-	LMTP        bool
-	Host        string
-	LocalName   string
-	DialTimeout time.Duration
+	Addr              string
+	Security          Security
+	TLSConfig         *tls.Config
+	LMTP              bool
+	Host              string
+	LocalName         string
+	DialTimeout       time.Duration
+	CommandTimeout    time.Duration
+	SubmissionTimeout time.Duration
 
 	unexported struct{}
 }
@@ -63,6 +74,28 @@ func (be *Backend) newConn() (*smtp.Client, error) {
 	if dialTimeout == 0 {
 		dialTimeout = defaultTimeout
 	}
+	commandTimeout := be.CommandTimeout
+	if commandTimeout == 0 {
+		commandTimeout = defaultCommandTimeout
+	}
+	submissionTimeout := be.SubmissionTimeout
+	if submissionTimeout == 0 {
+		submissionTimeout = defaultSubmissionTimeout
+	}
+
+	host := be.Host
+	if host == "" {
+		host, _, _ = net.SplitHostPort(be.Addr)
+	}
+	var tlsConfig *tls.Config
+	if be.TLSConfig == nil {
+		tlsConfig = &tls.Config{}
+	} else {
+		tlsConfig = be.TLSConfig.Clone()
+	}
+	if tlsConfig.ServerName == "" {
+		tlsConfig.ServerName = host
+	}
 
 	if be.LMTP {
 		if be.Security != SecurityNone {
@@ -74,7 +107,7 @@ func (be *Backend) newConn() (*smtp.Client, error) {
 			NetDialer: &net.Dialer{
 				Timeout: dialTimeout,
 			},
-			Config: be.TLSConfig,
+			Config: tlsConfig,
 		}
 		conn, err = tlsDialer.Dial("tcp", be.Addr)
 	} else {
@@ -88,11 +121,11 @@ func (be *Backend) newConn() (*smtp.Client, error) {
 	if be.LMTP {
 		c, err = smtp.NewClientLMTP(conn, be.Host)
 	} else {
-		host := be.Host
-		if host == "" {
-			host, _, _ = net.SplitHostPort(be.Addr)
+		c = &smtp.Client{
+			CommandTimeout:    commandTimeout,
+			SubmissionTimeout: submissionTimeout,
 		}
-		c, err = smtp.NewClient(conn, host)
+		err = c.InitConn(conn)
 	}
 	if err != nil {
 		return nil, err
@@ -106,7 +139,7 @@ func (be *Backend) newConn() (*smtp.Client, error) {
 	}
 
 	if be.Security == SecurityStartTLS {
-		if err := c.StartTLS(be.TLSConfig); err != nil {
+		if err := c.StartTLS(tlsConfig); err != nil {
 			return nil, err
 		}
 	}
