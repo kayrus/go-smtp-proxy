@@ -8,6 +8,7 @@ import (
 
 type Session interface {
 	smtp.Session
+	Noop() error
 	Status() *smtp.SMTPError
 }
 
@@ -19,6 +20,10 @@ type session struct {
 
 func (s *session) Reset() {
 	s.c.Reset()
+}
+
+func (s *session) Noop() error {
+	return s.c.Noop()
 }
 
 func (s *session) Mail(from string, opts *smtp.MailOptions) error {
