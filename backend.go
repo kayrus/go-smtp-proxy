@@ -128,19 +128,19 @@ func (be *Backend) newConn() (*smtp.Client, error) {
 		err = c.InitConn(conn)
 	}
 	if err != nil {
-		return nil, err
+		return c, err
 	}
 
 	if be.LocalName != "" {
 		err = c.Hello(be.LocalName)
 		if err != nil {
-			return nil, err
+			return c, err
 		}
 	}
 
 	if be.Security == SecurityStartTLS {
 		if err := c.StartTLS(tlsConfig); err != nil {
-			return nil, err
+			return c, err
 		}
 	}
 
@@ -150,12 +150,12 @@ func (be *Backend) newConn() (*smtp.Client, error) {
 func (be *Backend) login(username, password string) (*smtp.Client, error) {
 	c, err := be.newConn()
 	if err != nil {
-		return nil, err
+		return c, err
 	}
 
 	auth := sasl.NewPlainClient("", username, password)
 	if err := c.Auth(auth); err != nil {
-		return nil, err
+		return c, err
 	}
 
 	return c, nil
@@ -164,6 +164,9 @@ func (be *Backend) login(username, password string) (*smtp.Client, error) {
 func (be *Backend) Login(state *smtp.ConnectionState, username, password string) (smtp.Session, error) {
 	c, err := be.login(username, password)
 	if err != nil {
+		if c != nil {
+			c.Close()
+		}
 		return nil, err
 	}
 
@@ -177,6 +180,9 @@ func (be *Backend) Login(state *smtp.ConnectionState, username, password string)
 func (be *Backend) AnonymousLogin(state *smtp.ConnectionState) (smtp.Session, error) {
 	c, err := be.newConn()
 	if err != nil {
+		if c != nil {
+			c.Close()
+		}
 		return nil, err
 	}
 
