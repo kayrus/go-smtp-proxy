@@ -6,9 +6,15 @@ import (
 	"github.com/emersion/go-smtp"
 )
 
+type Session interface {
+	smtp.Session
+	Status() *smtp.SMTPError
+}
+
 type session struct {
 	c  *smtp.Client
 	be *Backend
+	st *smtp.SMTPError
 }
 
 func (s *session) Reset() {
@@ -24,7 +30,7 @@ func (s *session) Rcpt(to string) error {
 }
 
 func (s *session) Data(r io.Reader) error {
-	wc, err := s.c.Data()
+	wc, err := s.c.Data(s.statusCb)
 	if err != nil {
 		return err
 	}
@@ -40,4 +46,12 @@ func (s *session) Data(r io.Reader) error {
 
 func (s *session) Logout() error {
 	return s.c.Quit()
+}
+
+func (s *session) Status() *smtp.SMTPError {
+	return s.st
+}
+
+func (s *session) statusCb(status *smtp.SMTPError) {
+	s.st = status
 }

@@ -1,4 +1,4 @@
 github.com/emersion/go-sasl v0.0.0-20200509203442-7bfe0ed36a21 h1:OJyUGMJTzHTd1XQp98QTaHernxMYzRaOasRir9hUlFQ=
 github.com/emersion/go-sasl v0.0.0-20200509203442-7bfe0ed36a21/go.mod h1:iL2twTeMvZnrg54ZoPDNfJaJaqy0xIQFuBdrLsmspwQ=
-github.com/kayrus/go-smtp v0.15.1-0.20220429101136-9725ff5e8b1b h1:ZcreK718yMU8I9/rNTCNC6XftVOGXSGm8I9A2V4Nl3w=
-github.com/kayrus/go-smtp v0.15.1-0.20220429101136-9725ff5e8b1b/go.mod h1:qm27SGYgoIPRot6ubfQ/GpiPy/g3PaZAVRxiO/sDUgQ=
+github.com/kayrus/go-smtp v0.15.1-0.20220614174538-08dbc71e586d h1:U6D7dZ08115lC2FKUmoes3bF0Y188dMh6sO5uPDfGcY=
+github.com/kayrus/go-smtp v0.15.1-0.20220614174538-08dbc71e586d/go.mod h1:qm27SGYgoIPRot6ubfQ/GpiPy/g3PaZAVRxiO/sDUgQ=

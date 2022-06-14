@@ -7,4 +7,4 @@ require (
 	github.com/emersion/go-smtp v0.12.0
 )
 
-replace github.com/emersion/go-smtp => github.com/kayrus/go-smtp v0.15.1-0.20220429101136-9725ff5e8b1b
+replace github.com/emersion/go-smtp => github.com/kayrus/go-smtp v0.15.1-0.20220614174538-08dbc71e586d
